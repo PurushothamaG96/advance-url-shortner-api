@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: shortener-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: shortener
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:6
+    container_name: shortener-redis
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    container_name: shortener-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - postgres
+      - redis
