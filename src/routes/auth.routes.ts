@@ -20,7 +20,6 @@ router.get(
 
 // Successful login
 router.get("/success", (req, res) => {
-  console.log(req.user);
   res.send("Google Authentication Successful! Welcome, " + req.user);
 });
 
