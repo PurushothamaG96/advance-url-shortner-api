@@ -22,6 +22,8 @@ app.use(passport.session());
 
 app.use("/auth", authRoutes);
 
+const PORT = process.env.PORT || 5000;
+
 // Initialize the database and start the server
 AppDataSource.initialize()
   .then(() => {
@@ -34,6 +36,3 @@ AppDataSource.initialize()
   .catch((error: Error) => {
     console.error("Error during database initialization", error);
   });
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log("APP listening on port", PORT));

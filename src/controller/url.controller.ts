@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AppDataSource } from "../config/database";
+import AppDataSource from "../config/database";
 import { Url } from "../entities/shortURL";
 import { generateShortCode } from "../utils/shortener";
 
@@ -11,7 +11,9 @@ export const createShortUrl = async (req: Request, res: Response) => {
 
     // Check if custom alias already exists
     if (customAlias) {
-      const existingUrl = await urlRepository.findOneBy({ shortCode: customAlias });
+      const existingUrl = await urlRepository.findOneBy({
+        shortCode: customAlias,
+      });
       if (existingUrl) {
         return res.status(400).json({ message: "Custom alias already in use" });
       }
@@ -62,6 +64,7 @@ export const getUrlAnalytics = async (req: Request, res: Response) => {
   const { shortCode } = req.params;
 
   try {
+    // check
     const urlRepository = AppDataSource.getRepository(Url);
     const url = await urlRepository.findOneBy({ shortCode });
 
