@@ -1,37 +1,41 @@
-import { MigrationInterface, QueryRunner, Table } from "typeorm";
+import {
+  MigrationInterface,
+  QueryRunner,
+  Table,
+  TableForeignKey,
+} from "typeorm";
 
-export class CreateUserTable1734709736377 implements MigrationInterface {
+export class CreateShortUrl1736904714833 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
     await queryRunner.createTable(
       new Table({
-        name: "users",
+        name: "urls",
         columns: [
           {
             name: "id",
             type: "uuid",
             isPrimary: true,
-            isUnique: true,
             generationStrategy: "uuid",
             default: `uuid_generate_v4()`,
           },
           {
-            name: "googleId",
+            name: "createdUserId",
+            type: "uuid",
+            isNullable: false,
+          },
+          {
+            name: "longUrl",
+            type: "text",
+            isNullable: false,
+          },
+          {
+            name: "shortCode",
             type: "text",
             isUnique: true,
-          },
-          {
-            name: "email",
-            type: "text",
             isNullable: false,
           },
           {
-            name: "name",
-            type: "text",
-            isNullable: false,
-          },
-          {
-            name: "profileUrl",
+            name: "topic",
             type: "text",
             isNullable: true,
             default: null,
@@ -41,17 +45,24 @@ export class CreateUserTable1734709736377 implements MigrationInterface {
             type: "timestamptz",
             default: "now()",
           },
-          {
-            name: "updatedAt",
-            type: "timestamptz",
-            default: "now()",
-          },
         ],
+      })
+    );
+
+    await queryRunner.createForeignKey(
+      "urls",
+      new TableForeignKey({
+        columnNames: ["createdUserId"],
+        referencedColumnNames: ["id"],
+        referencedTableName: "users",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       })
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropTable("user");
+    const table = await queryRunner.getTable("urls");
+    await queryRunner.dropTable("urls");
   }
 }

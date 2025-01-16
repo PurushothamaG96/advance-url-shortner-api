@@ -4,16 +4,21 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
+  JoinColumn,
 } from "typeorm";
 import { Url } from "./shortURL";
+import { User } from "./users";
 
 @Entity("analytics")
 export class Analytics {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn("uuid")
+  id: string;
 
-  @ManyToOne(() => Url)
-  shortUrl: Url;
+  @Column({ type: "uuid" })
+  sortUrlId: string;
+
+  @Column({ type: "uuid" })
+  accessUserId: string;
 
   @Column()
   userAgent: string;
@@ -27,6 +32,17 @@ export class Analytics {
   @Column()
   deviceName: string;
 
+  @Column()
+  geoLocator: string;
+
   @CreateDateColumn()
   accessedAt: Date;
+
+  @ManyToOne(() => Url, (url) => url.analytics)
+  @JoinColumn({ name: "sortUrlId", referencedColumnName: "id" })
+  shortUrl: Url;
+
+  @ManyToOne(() => User, (user) => user.analytics)
+  @JoinColumn({ name: "accessUserId", referencedColumnName: "id" })
+  user: Url;
 }

@@ -4,9 +4,14 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from "typeorm";
+import { Url } from "./shortURL";
+import { Analytics } from "./analytics";
+import { UniqueOS } from "./uniqueOs";
+import { UniqueDevices } from "./uniqueDevices";
 
-@Entity("user")
+@Entity("users")
 export class User {
   @PrimaryGeneratedColumn("uuid")
   id: string;
@@ -28,4 +33,16 @@ export class User {
 
   @UpdateDateColumn({ type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
   updatedAt: Date;
+
+  @OneToMany(() => Url, (url) => url.user)
+  urls: Url[];
+
+  @OneToMany(() => Analytics, (analytics) => analytics.user)
+  analytics: Analytics[];
+
+  @OneToMany(() => UniqueOS, (uniqueOs) => uniqueOs.user)
+  os: UniqueOS[];
+
+  @OneToMany(() => UniqueDevices, (uniqueDevice) => uniqueDevice.user)
+  device: UniqueDevices[];
 }

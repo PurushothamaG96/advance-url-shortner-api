@@ -1,9 +1,24 @@
-import { Request, Response } from "express";
+import e, { Request, Response } from "express";
+import { UAParser } from "ua-parser-js";
+import geoip from "geoip-lite";
 import AppDataSource from "../config/database";
 import { Url } from "../entities/shortURL";
-import { generateShortCode } from "../utils/shortener";
+import { generateShortId } from "../utils/shortener";
+import { Analytics } from "../entities/analytics";
+import { UniqueDevices } from "../entities/uniqueDevices";
+import { UniqueOS } from "../entities/uniqueOs";
+import { EntityManager } from "typeorm";
+import {
+  DeviceAccumulator,
+  OSAccumulator,
+  OverallAccumulator,
+  TopicAccumulator,
+  uniqueDateAccumulator,
+} from "../interface/url";
+import { formatDate } from "date-fns";
+import { processDeviceType, processOs } from "../utils/response";
 
-export const createShortUrl = async (req: Request, res: Response) => {
+export const createShortUrl = async (req: any, res: any) => {
   const { longUrl, customAlias, topic } = req.body;
 
   try {
@@ -19,21 +34,21 @@ export const createShortUrl = async (req: Request, res: Response) => {
       }
     }
 
-    const shortCode = customAlias || generateShortCode();
+    const shortCode = customAlias || generateShortId();
 
     const newUrl = urlRepository.create({
       longUrl,
       shortCode,
       topic,
       createdAt: new Date(),
-      user: req.user, // assuming middleware adds `req.user`
+      createdUserId: req.user,
     });
 
     await urlRepository.save(newUrl);
 
     return res.status(201).json({
-      message: "Short URL created successfully",
-      shortUrl: `${process.env.BASE_URL}/${shortCode}`,
+      shortUrl: `${process.env.BASE_URL}/api/shorten/${shortCode}`,
+      createdAt: newUrl.createdAt,
     });
   } catch (error) {
     console.error("Error creating short URL:", error);
@@ -41,46 +56,307 @@ export const createShortUrl = async (req: Request, res: Response) => {
   }
 };
 
-export const redirectUrl = async (req: Request, res: Response) => {
-  const { shortCode } = req.params;
+export const redirectUrl = async (req: e.Request, res: e.Response) => {
+  const { alias } = req.params;
+
+  console.log(alias);
 
   try {
     const urlRepository = AppDataSource.getRepository(Url);
-    const url = await urlRepository.findOneBy({ shortCode });
+    const analyticsRepository = AppDataSource.getRepository(Analytics);
+    const uniqueDeviceRepository = AppDataSource.getRepository(UniqueDevices);
+    const uniqueOsRepository = AppDataSource.getRepository(UniqueOS);
+
+    // Find the URL
+    const url = await urlRepository.findOneBy({ shortCode: alias });
 
     if (!url) {
-      return res.status(404).json({ message: "Short URL not found" });
-    }
+      res.status(404).json({ message: "Short URL not found" });
+    } else {
+      // Collect analytics data
+      const userAgent = req.headers["user-agent"] || "Unknown";
+      const parser = UAParser(userAgent);
+      const ipAddress = req.ip || req.socket.remoteAddress;
+      const geo = geoip.lookup(ipAddress!);
 
-    // Redirect to original URL
-    return res.redirect(url.longUrl);
+      const deviceName = parser.device.vendor || "Desktop";
+
+      await urlRepository.manager.transaction(
+        async (transactionEntityManager: EntityManager) => {
+          // Create an analytics entry
+          const analytics = analyticsRepository.create({
+            sortUrlId: url!.id,
+            userAgent: userAgent,
+            ipAddress: ipAddress as string,
+            osName: parser.os.name || "Unknown",
+            deviceName,
+            accessedAt: new Date(),
+            geoLocator: JSON.stringify(geo),
+            accessUserId: req.user! as string,
+          });
+
+          // Create an analytics entry
+          const uniqueDevice = uniqueDeviceRepository.create({
+            urlId: url!.id,
+            deviceName,
+            accessUserId: req.user! as string,
+          });
+
+          // Create an analytics entry
+          const uniqueOs = uniqueOsRepository.create({
+            urlId: url!.id,
+            osName: parser.os.name || "Unknown",
+            accessUserId: req.user! as string,
+          });
+
+          await Promise.all([
+            transactionEntityManager.save(analytics),
+            transactionEntityManager.save(uniqueDevice),
+            transactionEntityManager.save(uniqueOs),
+          ]);
+
+          // Redirect to the original URL
+          res.redirect(url!.longUrl);
+        }
+      );
+    }
   } catch (error) {
     console.error("Error redirecting:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 export const getUrlAnalytics = async (req: Request, res: Response) => {
-  const { shortCode } = req.params;
+  const { alias } = req.params;
 
   try {
     // check
     const urlRepository = AppDataSource.getRepository(Url);
-    const url = await urlRepository.findOneBy({ shortCode });
+    const url = await urlRepository.findOne({
+      where: {
+        shortCode: alias,
+      },
+      relations: {
+        analytics: true,
+        uniqueOS: true,
+        uniqueDevices: true,
+      },
+    });
 
     if (!url) {
-      return res.status(404).json({ message: "Short URL not found" });
-    }
+      res.status(404).json({ message: "Short URL not found" });
+    } else {
+      // Total clicks
+      const totalClicks = url.analytics.length;
 
-    return res.status(200).json({
-      shortCode: url.shortCode,
-      longUrl: url.longUrl,
-      topic: url.topic,
-      createdAt: url.createdAt,
-      owner: url.user,
-    });
+      // Unique users
+      const uniqueUsers = new Set(
+        url.analytics.map((analytic) => analytic.accessUserId)
+      ).size;
+
+      const dateClicks = url.analytics.reduce<uniqueDateAccumulator>(
+        (acc, d) => {
+          const datePart = formatDate(d.accessedAt, "yyyy-MM-dd");
+          if (!acc[datePart]) {
+            acc[datePart] = 0;
+          }
+          acc[datePart] += 1;
+          return acc;
+        },
+        {}
+      );
+
+      const clicksByDate = Object.entries(dateClicks).map(
+        ([date, totalClicks]) => ({
+          date,
+          totalClicks,
+        })
+      );
+
+      const osType = processOs(url.uniqueOS);
+      const deviceType = processDeviceType(url.uniqueDevices);
+      // Response
+      res.status(200).json({
+        totalClicks,
+        uniqueUsers,
+        clicksByDate,
+        osType,
+        deviceType,
+      });
+    }
   } catch (error) {
     console.error("Error fetching analytics:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getTopicAnalytics = async (req: Request, res: Response) => {
+  const { topic } = req.params;
+
+  try {
+    // check
+    const urlRepository = AppDataSource.getRepository(Url);
+    const urls = await urlRepository.find({
+      where: {
+        topic,
+      },
+      relations: {
+        analytics: true,
+      },
+    });
+
+    if (!urls.length) {
+      res.status(404).json({ message: "topic not found" });
+    } else {
+      // Total clicks
+      const topicAccumulator = urls.reduce<TopicAccumulator>(
+        (acc, url) => {
+          if (!acc.totalClicks) acc.totalClicks = 0;
+          if (!acc.uniqueUsers) acc.uniqueUsers = new Set();
+          if (!acc.clicksByDate) acc.clicksByDate = new Map();
+          if (!acc.urls) acc.urls = [];
+
+          const totalClicks = url.analytics.length;
+
+          acc.totalClicks += totalClicks;
+
+          // Unique users
+          url.analytics.map((analytic) => {
+            acc.uniqueUsers.add(analytic.accessUserId);
+
+            const datePart = formatDate(analytic.accessedAt, "yyyy-MM-dd");
+            if (!acc.clicksByDate.has(datePart)) {
+              acc.clicksByDate.set(datePart, 1);
+            } else {
+              acc.clicksByDate.set(
+                datePart,
+                acc.clicksByDate.get(datePart)! + 1
+              );
+            }
+          });
+
+          // Unique users
+          const uniqueUsers = new Set(
+            url.analytics.map((analytic) => analytic.accessUserId)
+          ).size;
+
+          acc.urls.push({
+            shortUrl: url.shortCode,
+            totalClicks,
+            uniqueUsers,
+          });
+
+          return acc;
+        },
+        {
+          totalClicks: 0,
+          uniqueUsers: new Set(),
+          clicksByDate: new Map(),
+          urls: [],
+        }
+      );
+
+      const clicksByDate: { date: string; totalClicks: number }[] = [];
+      topicAccumulator.clicksByDate.forEach(function (totalClicks, date) {
+        clicksByDate.push({ date, totalClicks });
+      });
+
+      // Response
+      res.status(200).json({
+        totalClicks: topicAccumulator.totalClicks,
+        uniqueUsers: topicAccumulator.uniqueUsers.size,
+        clicksByDate,
+        urls: topicAccumulator.urls,
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching analytics:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getOverallAnalytics = async (req: Request, res: Response) => {
+  try {
+    // check
+    const urlRepository = AppDataSource.getRepository(Url);
+    const urls = await urlRepository.find({
+      relations: {
+        analytics: true,
+        uniqueOS: true,
+        uniqueDevices: true,
+      },
+    });
+
+    if (!urls.length) {
+      res.status(404).json({ message: "analytics not found" });
+    } else {
+      // Total clicks
+      const topicAccumulator = urls.reduce<OverallAccumulator>(
+        (acc, url) => {
+          if (!acc.totalClicks) acc.totalClicks = 0;
+          if (!acc.uniqueUsers) acc.uniqueUsers = new Set();
+          if (!acc.clicksByDate) acc.clicksByDate = new Map();
+
+          const totalClicks = url.analytics.length;
+
+          acc.totalClicks += totalClicks;
+
+          // Unique users
+          url.analytics.map((analytic) => {
+            acc.uniqueUsers.add(analytic.accessUserId);
+
+            const datePart = formatDate(analytic.accessedAt, "yyyy-MM-dd");
+            if (!acc.clicksByDate.has(datePart)) {
+              acc.clicksByDate.set(datePart, 1);
+            } else {
+              acc.clicksByDate.set(
+                datePart,
+                acc.clicksByDate.get(datePart)! + 1
+              );
+            }
+          });
+          acc.osType = [
+            ...acc.osType,
+            ...(Array.isArray(url.uniqueOS) ? url.uniqueOS : [url.uniqueOS]),
+          ];
+          acc.deviceType = [
+            ...acc.deviceType,
+            ...(Array.isArray(url.uniqueDevices)
+              ? url.uniqueDevices
+              : [url.uniqueDevices]),
+          ];
+
+          return acc;
+        },
+        {
+          totalClicks: 0,
+          uniqueUsers: new Set(),
+          clicksByDate: new Map(),
+          osType: [],
+          deviceType: [],
+        }
+      );
+
+      const clicksByDate: { date: string; totalClicks: number }[] = [];
+      topicAccumulator.clicksByDate.forEach(function (totalClicks, date) {
+        clicksByDate.push({ date, totalClicks });
+      });
+
+      const osType = processOs(topicAccumulator.osType);
+      const deviceType = processDeviceType(topicAccumulator.deviceType);
+
+      // Response
+      res.status(200).json({
+        totalUrls: urls.length,
+        totalClicks: topicAccumulator.totalClicks,
+        uniqueUsers: topicAccumulator.uniqueUsers.size,
+        clicksByDate,
+        osType,
+        deviceType,
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching analytics:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
