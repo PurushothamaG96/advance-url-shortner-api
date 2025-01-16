@@ -1,8 +1,5 @@
-import { customAlphabet } from "nanoid";
+import { v4 as uuidv4 } from "uuid";
 
-export const generateShortCode = (): string => {
-  const alphabet =
-    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  const nanoid = customAlphabet(alphabet, 6); // Generates 6-character code
-  return nanoid();
+export const generateShortId = (): string => {
+  return uuidv4().slice(0, 8);
 };

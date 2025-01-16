@@ -1,10 +1,23 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
-import { User } from "./user";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from "typeorm";
+import { User } from "./users";
+import { Analytics } from "./analytics";
+import { UniqueOS } from "./uniqueOs";
+import { UniqueDevices } from "./uniqueDevices";
 
-@Entity()
+@Entity("urls")
 export class Url {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn("uuid")
+  id: string;
+
+  @Column({ type: "uuid" })
+  createdUserId: string;
 
   @Column()
   longUrl: string;
@@ -18,6 +31,16 @@ export class Url {
   @Column()
   createdAt: Date;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, (user) => user.urls)
+  @JoinColumn({ name: "createdUserId", referencedColumnName: "id" })
   user: User;
+
+  @OneToMany(() => Analytics, (analytics) => analytics.shortUrl)
+  analytics: Analytics[];
+
+  @OneToMany(() => UniqueOS, (uniqueOS) => uniqueOS.url)
+  uniqueOS: UniqueOS[];
+
+  @OneToMany(() => UniqueDevices, (uniqueDevice) => uniqueDevice.url)
+  uniqueDevices: UniqueDevices[];
 }

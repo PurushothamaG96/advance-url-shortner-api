@@ -1,31 +1,13 @@
 import { Router } from "express";
-import passport from "passport";
+import {
+  loginController,
+  registerController,
+} from "../controller/auth.controller";
 
 const router = Router();
 
-// Google OAuth login
-router.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+router.post("/register", registerController);
 
-// Google OAuth callback
-router.get(
-  "/google/callback",
-  passport.authenticate("google", { failureRedirect: "/auth/failure" }),
-  (req, res) => {
-    res.redirect("/auth/success");
-  }
-);
-
-// Successful login
-router.get("/success", (req, res) => {
-  res.send("Google Authentication Successful! Welcome, " + req.user);
-});
-
-// Failed login
-router.get("/failure", (req, res) => {
-  res.send("Failed to authenticate.");
-});
+router.post("/login", loginController);
 
 export default router;

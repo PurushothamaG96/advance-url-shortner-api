@@ -1,8 +1,9 @@
 import express from "express";
 import session from "express-session";
-import passport from "./config/passport";
 import authRoutes from "./routes/auth.routes";
+import urlRoutes from "./routes/url.routes";
 import AppDataSource from "./config/database";
+import { setupUrlSwagger } from "./swagger/swagger-docs/short-swagger";
 
 const app = express();
 
@@ -17,12 +18,12 @@ app.use(
   })
 );
 
-app.use(passport.initialize());
-app.use(passport.session());
-
+setupUrlSwagger(app);
 app.use("/auth", authRoutes);
 
-const PORT = process.env.PORT || 5000;
+app.use("/api", urlRoutes);
+
+const PORT = process.env.PORT || 3000;
 
 // Initialize the database and start the server
 AppDataSource.initialize()
