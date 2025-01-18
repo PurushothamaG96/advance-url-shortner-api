@@ -1,4 +1,4 @@
-import e, { Request, Response } from "express";
+import e, { Request, response, Response } from "express";
 import { UAParser } from "ua-parser-js";
 import geoip from "geoip-lite";
 import AppDataSource from "../config/database";
@@ -17,6 +17,7 @@ import {
 } from "../interface/url";
 import { formatDate } from "date-fns";
 import { processDeviceType, processOs } from "../utils/response";
+import redis from "../config/redis";
 
 export const createShortUrl = async (req: any, res: any) => {
   const { longUrl, customAlias, topic } = req.body;
@@ -58,8 +59,6 @@ export const createShortUrl = async (req: any, res: any) => {
 
 export const redirectUrl = async (req: e.Request, res: e.Response) => {
   const { alias } = req.params;
-
-  console.log(alias);
 
   try {
     const urlRepository = AppDataSource.getRepository(Url);
@@ -128,150 +127,172 @@ export const redirectUrl = async (req: e.Request, res: e.Response) => {
 
 export const getUrlAnalytics = async (req: Request, res: Response) => {
   const { alias } = req.params;
-
-  try {
-    // check
-    const urlRepository = AppDataSource.getRepository(Url);
-    const url = await urlRepository.findOne({
-      where: {
-        shortCode: alias,
-      },
-      relations: {
-        analytics: true,
-        uniqueOS: true,
-        uniqueDevices: true,
-      },
-    });
-
-    if (!url) {
-      res.status(404).json({ message: "Short URL not found" });
-    } else {
-      // Total clicks
-      const totalClicks = url.analytics.length;
-
-      // Unique users
-      const uniqueUsers = new Set(
-        url.analytics.map((analytic) => analytic.accessUserId)
-      ).size;
-
-      const dateClicks = url.analytics.reduce<uniqueDateAccumulator>(
-        (acc, d) => {
-          const datePart = formatDate(d.accessedAt, "yyyy-MM-dd");
-          if (!acc[datePart]) {
-            acc[datePart] = 0;
-          }
-          acc[datePart] += 1;
-          return acc;
+  const analyticsBuffer = await redis.get(alias);
+  if (analyticsBuffer) {
+    res.status(200).json(JSON.parse(analyticsBuffer));
+  } else {
+    try {
+      // check
+      const urlRepository = AppDataSource.getRepository(Url);
+      const url = await urlRepository.findOne({
+        where: {
+          shortCode: alias,
         },
-        {}
-      );
-
-      const clicksByDate = Object.entries(dateClicks).map(
-        ([date, totalClicks]) => ({
-          date,
-          totalClicks,
-        })
-      );
-
-      const osType = processOs(url.uniqueOS);
-      const deviceType = processDeviceType(url.uniqueDevices);
-      // Response
-      res.status(200).json({
-        totalClicks,
-        uniqueUsers,
-        clicksByDate,
-        osType,
-        deviceType,
+        relations: {
+          analytics: true,
+          uniqueOS: true,
+          uniqueDevices: true,
+        },
       });
+
+      if (!url) {
+        res.status(404).json({ message: "Short URL not found" });
+      } else {
+        // Total clicks
+        const totalClicks = url.analytics.length;
+
+        // Unique users
+        const uniqueUsers = new Set(
+          url.analytics.map((analytic) => analytic.accessUserId)
+        ).size;
+
+        const dateClicks = url.analytics.reduce<uniqueDateAccumulator>(
+          (acc, d) => {
+            const datePart = formatDate(d.accessedAt, "yyyy-MM-dd");
+            if (!acc[datePart]) {
+              acc[datePart] = 0;
+            }
+            acc[datePart] += 1;
+            return acc;
+          },
+          {}
+        );
+
+        const clicksByDate = Object.entries(dateClicks).map(
+          ([date, totalClicks]) => ({
+            date,
+            totalClicks,
+          })
+        );
+
+        const osType = processOs(url.uniqueOS);
+        const deviceType = processDeviceType(url.uniqueDevices);
+
+        const response = {
+          totalClicks,
+          uniqueUsers,
+          clicksByDate,
+          osType,
+          deviceType,
+        };
+
+        // This is set in between 10 buffer data
+        await redis.set(alias, JSON.stringify(response), "EX", 10);
+        // Response
+        res.status(200).json(response);
+      }
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
-  } catch (error) {
-    console.error("Error fetching analytics:", error);
-    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 export const getTopicAnalytics = async (req: Request, res: Response) => {
-  const { topic } = req.params;
-
   try {
-    // check
-    const urlRepository = AppDataSource.getRepository(Url);
-    const urls = await urlRepository.find({
-      where: {
-        topic,
-      },
-      relations: {
-        analytics: true,
-      },
-    });
+    const { topic } = req.params;
 
-    if (!urls.length) {
-      res.status(404).json({ message: "topic not found" });
+    const topicBuffer = await redis.get(topic);
+
+    if (topicBuffer) {
+      res.status(200).json(JSON.parse(topicBuffer));
     } else {
-      // Total clicks
-      const topicAccumulator = urls.reduce<TopicAccumulator>(
-        (acc, url) => {
-          if (!acc.totalClicks) acc.totalClicks = 0;
-          if (!acc.uniqueUsers) acc.uniqueUsers = new Set();
-          if (!acc.clicksByDate) acc.clicksByDate = new Map();
-          if (!acc.urls) acc.urls = [];
+      try {
+        // check
+        const urlRepository = AppDataSource.getRepository(Url);
+        const urls = await urlRepository.find({
+          where: {
+            topic,
+          },
+          relations: {
+            analytics: true,
+          },
+        });
 
-          const totalClicks = url.analytics.length;
+        if (!urls.length) {
+          res.status(404).json({ message: "topic not found" });
+        } else {
+          // Total clicks
+          const topicAccumulator = urls.reduce<TopicAccumulator>(
+            (acc, url) => {
+              if (!acc.totalClicks) acc.totalClicks = 0;
+              if (!acc.uniqueUsers) acc.uniqueUsers = new Set();
+              if (!acc.clicksByDate) acc.clicksByDate = new Map();
+              if (!acc.urls) acc.urls = [];
 
-          acc.totalClicks += totalClicks;
+              const totalClicks = url.analytics.length;
 
-          // Unique users
-          url.analytics.map((analytic) => {
-            acc.uniqueUsers.add(analytic.accessUserId);
+              acc.totalClicks += totalClicks;
 
-            const datePart = formatDate(analytic.accessedAt, "yyyy-MM-dd");
-            if (!acc.clicksByDate.has(datePart)) {
-              acc.clicksByDate.set(datePart, 1);
-            } else {
-              acc.clicksByDate.set(
-                datePart,
-                acc.clicksByDate.get(datePart)! + 1
-              );
+              // Unique users
+              url.analytics.map((analytic) => {
+                acc.uniqueUsers.add(analytic.accessUserId);
+
+                const datePart = formatDate(analytic.accessedAt, "yyyy-MM-dd");
+                if (!acc.clicksByDate.has(datePart)) {
+                  acc.clicksByDate.set(datePart, 1);
+                } else {
+                  acc.clicksByDate.set(
+                    datePart,
+                    acc.clicksByDate.get(datePart)! + 1
+                  );
+                }
+              });
+
+              // Unique users
+              const uniqueUsers = new Set(
+                url.analytics.map((analytic) => analytic.accessUserId)
+              ).size;
+
+              acc.urls.push({
+                shortUrl: url.shortCode,
+                totalClicks,
+                uniqueUsers,
+              });
+
+              return acc;
+            },
+            {
+              totalClicks: 0,
+              uniqueUsers: new Set(),
+              clicksByDate: new Map(),
+              urls: [],
             }
+          );
+
+          const clicksByDate: { date: string; totalClicks: number }[] = [];
+          topicAccumulator.clicksByDate.forEach(function (totalClicks, date) {
+            clicksByDate.push({ date, totalClicks });
           });
 
-          // Unique users
-          const uniqueUsers = new Set(
-            url.analytics.map((analytic) => analytic.accessUserId)
-          ).size;
+          const response = {
+            totalClicks: topicAccumulator.totalClicks,
+            uniqueUsers: topicAccumulator.uniqueUsers.size,
+            clicksByDate,
+            urls: topicAccumulator.urls,
+          };
 
-          acc.urls.push({
-            shortUrl: url.shortCode,
-            totalClicks,
-            uniqueUsers,
-          });
-
-          return acc;
-        },
-        {
-          totalClicks: 0,
-          uniqueUsers: new Set(),
-          clicksByDate: new Map(),
-          urls: [],
+          await redis.set(topic, JSON.stringify(response), "EX", 10);
+          // Response
+          res.status(200).json(response);
         }
-      );
-
-      const clicksByDate: { date: string; totalClicks: number }[] = [];
-      topicAccumulator.clicksByDate.forEach(function (totalClicks, date) {
-        clicksByDate.push({ date, totalClicks });
-      });
-
-      // Response
-      res.status(200).json({
-        totalClicks: topicAccumulator.totalClicks,
-        uniqueUsers: topicAccumulator.uniqueUsers.size,
-        clicksByDate,
-        urls: topicAccumulator.urls,
-      });
+      } catch (error) {
+        console.error("Error fetching analytics:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
     }
   } catch (error) {
-    console.error("Error fetching analytics:", error);
-    res.status(500).json({ message: "Internal server error" });
+    throw error;
   }
 };
 
