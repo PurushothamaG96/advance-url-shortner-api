@@ -4,9 +4,10 @@
   "description": "An advanced URL Shortener API built with Node.js, Express, and TypeORM using a PostgreSQL database. It supports user authentication via Google OAuth, URL shortening with customizable aliases, click tracking with detailed analytics (device, IP, OS), and Redis caching for optimal performance.",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
+    "local:dev": "docker compose -f docker-compose.db.yml up -d && npm run dev",
+    "dev": "TZ=UTC doppler run -- ts-node-dev --respawn --transpile-only --notify=false src/server.ts",
+    "build": "tsc -p .",
+    "start": "doppler run node dist/server.js",
     "dev:create:db": "npx ts-node createDatabase.ts",
     "dev:migrate:make": "npx ts-node --transpile-only ./node_modules/typeorm/cli.js migration:create",
     "dev:migrate:latest": "npx ts-node --transpile-only ./node_modules/typeorm/cli.js migration:run -d src/config/database.ts",
@@ -56,8 +57,10 @@
     "@types/redis": "^4.0.11",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.7",
+    "cross-env": "^7.0.3",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
     "typescript": "^5.7.2"
   }
 }

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import AppDataSource from "../config/database";
 import { User } from "../entities/users";
 import { loginUser, registerUser } from "../service/auth-service";
+import redis from "../config/redis";
 
 export const registerController = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -68,9 +69,7 @@ export const loginController = async (req: Request, res: Response) => {
         await userRepository.save(user);
       }
 
-      // Respond with a success message
-      res.status(200).json({
-        message: "User logged in successfully",
+      const userData = {
         user: {
           email: user.email,
           name: user.name,
@@ -78,6 +77,15 @@ export const loginController = async (req: Request, res: Response) => {
         },
         refreshToken: firebaseUser.user.refreshToken,
         accessToken,
+      };
+
+      // Save the access token in Redis
+      await redis.set(accessToken, user.id, "EX", 3600);
+
+      // Respond with a success message
+      res.status(200).json({
+        message: "User logged in successfully",
+        userData,
       });
     } catch (error: any) {
       console.error(error);

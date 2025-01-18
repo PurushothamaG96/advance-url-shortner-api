@@ -4,6 +4,7 @@ import authRoutes from "./routes/auth.routes";
 import urlRoutes from "./routes/url.routes";
 import AppDataSource from "./config/database";
 import { setupUrlSwagger } from "./swagger/swagger-docs/short-swagger";
+import redis from "redis";
 
 const app = express();
 
@@ -23,7 +24,7 @@ app.use("/auth", authRoutes);
 
 app.use("/api", urlRoutes);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 // Initialize the database and start the server
 AppDataSource.initialize()

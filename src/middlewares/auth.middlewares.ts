@@ -3,6 +3,7 @@ import admin from "firebase-admin";
 import { User } from "../entities/users";
 import AppDataSource from "../config/database";
 import { firebaseServiceConfigure } from "../config/firebase-service";
+import redis from "../config/redis";
 
 admin.initializeApp({
   credential: admin.credential.cert(
@@ -23,7 +24,6 @@ export const authenticate = async (
 ) => {
   try {
     const authHeader = req.headers.authorization;
-    console.log("authHeader", authHeader);
     if (!authHeader?.startsWith("Bearer ")) {
       res
         .status(401)
@@ -32,15 +32,23 @@ export const authenticate = async (
       const token = authHeader.split(" ")[1];
       const decodedToken = await admin.auth().verifyIdToken(token);
 
-      const user = await AppDataSource.getRepository(User).findOne({
-        where: {
-          email: decodedToken.email,
-        },
-      });
+      // Save the access token in Redis
+      const userId = await redis.get(token);
 
-      if (!user) throw Error;
+      if (userId) {
+        req.user = userId;
+      } else {
+        const user = await AppDataSource.getRepository(User).findOne({
+          where: {
+            email: decodedToken.email,
+          },
+        });
 
-      req.user = user.id;
+        if (!user) throw Error;
+
+        req.user = user.id;
+      }
+
       next();
     }
   } catch (error: any) {
