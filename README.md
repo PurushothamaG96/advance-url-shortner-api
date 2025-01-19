@@ -1,6 +1,9 @@
 # advance-url-shortner-api
 An advanced URL Shortener API built with Node.js, Express, and Mongoose using a MongoDB database. It supports user authentication via Google OAuth, URL shortening with customizable aliases, click tracking with detailed analytics (device, IP, OS), and Redis caching for optimal performance.
 
+# Deployed site
+    https://advance-url-shortner-api.onrender.com/url/docs/#/Analytics/get_api_analytics_analytic_overall
+
 # Steps to Set Up
 # 1. Clone the repository:
     git clone https://github.com/PurushothamaG96/advance-url-shortner-api.git
