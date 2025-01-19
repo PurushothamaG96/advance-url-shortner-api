@@ -7,7 +7,7 @@
     "local:dev": "docker compose -f docker-compose.db.yml up -d && npm run dev",
     "dev": "TZ=UTC doppler run -- ts-node-dev --respawn --transpile-only --notify=false src/server.ts",
     "build": "tsc -p .",
-    "start": "doppler run node dist/server.js",
+    "start": "node dist/server.js",
     "dev:create:db": "npx ts-node createDatabase.ts",
     "dev:migrate:make": "npx ts-node --transpile-only ./node_modules/typeorm/cli.js migration:create",
     "dev:migrate:latest": "npx ts-node --transpile-only ./node_modules/typeorm/cli.js migration:run -d src/config/database.ts",
