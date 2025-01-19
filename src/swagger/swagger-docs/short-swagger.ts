@@ -21,7 +21,7 @@ const swaggerOptions: swaggerJsdoc.Options = {
     },
     security: [{ ApiKeyAuth: [] }],
   },
-  apis: ["src/swagger/swagger-model/*.ts"],
+  apis: ["src/swagger/swagger-model/*.ts", "dist/swagger/swagger-model/*.ts"],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
