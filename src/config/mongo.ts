@@ -2,7 +2,9 @@ import mongoose from "mongoose";
 
 const connectDatabase = async () => {
   try {
-    const dbUri = process.env.MONGO_URI || "mongodb://localhost:27017/shortener";
+    console.log(process.env.MONGO_URI);
+    const dbUri =
+      process.env.MONGO_URI || "mongodb://localhost:27017/shortener";
 
     await mongoose.connect(dbUri);
     console.log("MongoDB connected successfully");
