@@ -13,7 +13,6 @@ An advanced URL Shortener API built with Node.js, Express, and Mongoose using a 
     curl -Ls https://cli.doppler.com/install.sh | sh
 
 4. # Set up the environment using Doppler:
-    doppler setup --token dp.st.prd_production.TeG2RffgvahatStHWsd05azNOCn9CxvTUpa9dk3WXR5
 
     Run the app with Doppler to inject the environment variables:
     npm run dev
