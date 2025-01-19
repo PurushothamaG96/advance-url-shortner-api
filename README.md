@@ -3,7 +3,6 @@ An advanced URL Shortener API built with Node.js, Express, and Mongoose using a 
 
 # Steps to Set Up
 1. # Clone the repository:
-    git clone https://github.com/PurushothamaG96/advance-url-shortner-api.git
     cd advance-url-shortner-api
 
 2. # Install dependencies:
