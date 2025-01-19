@@ -33,6 +33,8 @@
     "ipware": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",
+    "mongodb": "^5.9.2",
+    "mongoose": "^8.9.5",
     "nanoid": "^5.0.9",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -41,7 +43,6 @@
     "reflect-metadata": "^0.2.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "typeorm": "^0.3.20",
     "ua-parser-js": "^2.0.0",
     "uuid": "^11.0.5"
   },

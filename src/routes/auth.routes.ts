@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
   loginController,
   registerController,
-} from "../controller/auth.controller";
+} from "../controller/mongo-auth-controller";
 
 const router = Router();
 

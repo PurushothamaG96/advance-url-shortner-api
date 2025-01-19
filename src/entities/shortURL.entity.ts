@@ -6,10 +6,10 @@ import {
   OneToMany,
   JoinColumn,
 } from "typeorm";
-import { User } from "./users";
-import { Analytics } from "./analytics";
-import { UniqueOS } from "./uniqueOs";
-import { UniqueDevices } from "./uniqueDevices";
+import { User } from "./users.entity";
+import { Analytics } from "./analytics.entity";
+import { UniqueOS } from "./uniqueOs.entity";
+import { UniqueDevices } from "./uniqueDevices.entity";
 
 @Entity("urls")
 export class Url {

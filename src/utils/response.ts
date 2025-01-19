@@ -1,9 +1,12 @@
-import { UniqueDevices } from "../entities/uniqueDevices";
-import { UniqueOS } from "../entities/uniqueOs";
+// import { UniqueDevices } from "../entities/uniqueDevices.entity";
+// import { UniqueOS } from "../entities/uniqueOs.entity";
+
+import { UniqueDevices } from "../schema/device";
+import { UniqueOS } from "../schema/os";
 import { DeviceType, OSType } from "../interface/response";
 import { DeviceAccumulator, OSAccumulator } from "../interface/url";
 
-export function processOs(uniqueOS: UniqueOS[]): OSType[] {
+export function processOs(uniqueOS: UniqueOS[] | any[]): OSType[] {
   // OS analytics
   const osAccumulator = uniqueOS.reduce<OSAccumulator>((acc, os) => {
     if (!acc[os.osName]) {
@@ -27,7 +30,7 @@ export function processOs(uniqueOS: UniqueOS[]): OSType[] {
 }
 
 export function processDeviceType(
-  uniqueDevices: UniqueDevices[]
+  uniqueDevices: UniqueDevices[] | any[]
 ): DeviceType[] {
   // Device analytics
   const deviceAccumulator = uniqueDevices.reduce<DeviceAccumulator>(

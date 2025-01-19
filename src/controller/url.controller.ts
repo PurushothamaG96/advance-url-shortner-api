@@ -2,11 +2,11 @@ import e, { Request, response, Response } from "express";
 import { UAParser } from "ua-parser-js";
 import geoip from "geoip-lite";
 import AppDataSource from "../config/database";
-import { Url } from "../entities/shortURL";
+import { Url } from "../entities/shortURL.entity";
 import { generateShortId } from "../utils/shortener";
-import { Analytics } from "../entities/analytics";
-import { UniqueDevices } from "../entities/uniqueDevices";
-import { UniqueOS } from "../entities/uniqueOs";
+import { Analytics } from "../entities/analytics.entity";
+import { UniqueDevices } from "../entities/uniqueDevices.entity";
+import { UniqueOS } from "../entities/uniqueOs.entity";
 import { EntityManager } from "typeorm";
 import {
   DeviceAccumulator,
@@ -15,7 +15,7 @@ import {
   TopicAccumulator,
   uniqueDateAccumulator,
 } from "../interface/url";
-import { formatDate } from "date-fns";
+import { format, formatDate } from "date-fns";
 import { processDeviceType, processOs } from "../utils/response";
 import redis from "../config/redis";
 
@@ -175,15 +175,15 @@ export const getUrlAnalytics = async (req: Request, res: Response) => {
           })
         );
 
-        const osType = processOs(url.uniqueOS);
-        const deviceType = processDeviceType(url.uniqueDevices);
+        // const osType = processOs(url.uniqueOS);
+        // const deviceType = processDeviceType(url.uniqueDevices);
 
         const response = {
           totalClicks,
           uniqueUsers,
           clicksByDate,
-          osType,
-          deviceType,
+          // osType,
+          // deviceType,
         };
 
         // This is set in between 10 buffer data

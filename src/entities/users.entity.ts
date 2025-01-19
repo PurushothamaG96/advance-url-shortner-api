@@ -6,10 +6,10 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from "typeorm";
-import { Url } from "./shortURL";
-import { Analytics } from "./analytics";
-import { UniqueOS } from "./uniqueOs";
-import { UniqueDevices } from "./uniqueDevices";
+import { Url } from "./shortURL.entity";
+import { Analytics } from "./analytics.entity";
+import { UniqueOS } from "./uniqueOs.entity";
+import { UniqueDevices } from "./uniqueDevices.entity";
 
 @Entity("users")
 export class User {

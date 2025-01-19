@@ -5,8 +5,8 @@ import {
   ManyToOne,
   JoinColumn,
 } from "typeorm";
-import { Url } from "./shortURL";
-import { User } from "./users";
+import { Url } from "./shortURL.entity";
+import { User } from "./users.entity";
 
 @Entity("unique_os")
 export class UniqueOS {

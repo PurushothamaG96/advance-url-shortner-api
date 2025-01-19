@@ -1,8 +1,7 @@
 import { Request, Response } from "express";
-import AppDataSource from "../config/database";
-import { User } from "../entities/users.entity";
 import { loginUser, registerUser } from "../service/auth-service";
 import redis from "../config/redis";
+import User from "../schema/user";
 
 export const registerController = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -14,22 +13,30 @@ export const registerController = async (req: Request, res: Response) => {
       // Register user in Firebase
       const firebaseUser = await registerUser(email, password);
 
-      // Save the user in the database
-      const userRepository = AppDataSource.getRepository(User);
-      const user = userRepository.create({
+      // Check if the user already exists in MongoDB
+      const existingUser = await User.findOne({
         googleId: firebaseUser.user.uid,
-        email,
-        name: firebaseUser.user.displayName || email.split("@")[0],
-        profileUrl: firebaseUser.user.photoURL || null,
       });
-      await userRepository.save(user);
+      if (existingUser) {
+        res.status(409).json({ message: "User already exists" });
+      } else {
+        // Create and save the user in MongoDB
+        const newUser = new User({
+          googleId: firebaseUser.user.uid,
+          email,
+          name: firebaseUser.user.displayName || email.split("@")[0],
+          profileUrl: firebaseUser.user.photoURL || null,
+        });
+        await newUser.save();
 
-      res
-        .status(201)
-        .json({ message: "User registered successfully", email: user.email });
+        res.status(201).json({
+          message: "User registered successfully",
+          email: newUser.email,
+        });
+      }
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: "Error registering user", error: error });
+      res.status(500).json({ message: "Error registering user", error });
     }
   }
 };
@@ -37,7 +44,6 @@ export const registerController = async (req: Request, res: Response) => {
 export const loginController = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  // Check for missing email or password
   if (!email || !password) {
     res.status(400).json({ message: "Email and password are required" });
   } else {
@@ -51,22 +57,18 @@ export const loginController = async (req: Request, res: Response) => {
 
       const accessToken = await firebaseUser.user.getIdToken();
 
-      const userRepository = AppDataSource.getRepository(User);
-
-      // Check if the user already exists in the database
-      let user = await userRepository.findOneBy({
-        googleId: firebaseUser.user.uid,
-      });
+      // Find the user in MongoDB by Google UID
+      let user = await User.findOne({ googleId: firebaseUser.user.uid });
 
       if (!user) {
-        // If not, create a new user in the database
-        user = userRepository.create({
+        // If not found, create a new user in MongoDB
+        user = new User({
           googleId: firebaseUser.user.uid,
           email: firebaseUser.user.email!,
           name: firebaseUser.user.displayName || email.split("@")[0],
           profileUrl: firebaseUser.user.photoURL || null,
         });
-        await userRepository.save(user);
+        await user.save();
       }
 
       const userData = {
@@ -80,9 +82,8 @@ export const loginController = async (req: Request, res: Response) => {
       };
 
       // Save the access token in Redis
-      await redis.set(accessToken, user.id, "EX", 3600);
+      await redis.set(accessToken, JSON.stringify(user._id!), "EX", 3600);
 
-      // Respond with a success message
       res.status(200).json({
         message: "User logged in successfully",
         userData,

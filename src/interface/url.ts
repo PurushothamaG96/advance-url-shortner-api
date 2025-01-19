@@ -1,5 +1,5 @@
-import { UniqueDevices } from "../entities/uniqueDevices";
-import { UniqueOS } from "../entities/uniqueOs";
+import { UniqueDevices } from "../schema/device";
+import { UniqueOS } from "../schema/os";
 
 export interface OSAccumulator {
   [osName: string]: UniqueOS[];
@@ -28,6 +28,6 @@ export interface OverallAccumulator {
   totalClicks: number;
   uniqueUsers: Set<string>;
   clicksByDate: Map<string, number>;
-  deviceType: UniqueDevices[];
-  osType: UniqueOS[];
+  deviceType: UniqueDevices[] | any[];
+  osType: UniqueOS[] | any[];
 }
