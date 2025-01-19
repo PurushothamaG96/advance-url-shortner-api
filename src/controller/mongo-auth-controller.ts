@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { loginUser, registerUser } from "../service/auth-service";
-import redis from "../config/redis";
+// import redis from "../config/redis";
 import User from "../schema/user";
 
 export const registerController = async (req: Request, res: Response) => {
@@ -82,7 +82,7 @@ export const loginController = async (req: Request, res: Response) => {
       };
 
       // Save the access token in Redis
-      await redis.set(accessToken, JSON.stringify(user._id!), "EX", 3600);
+      // await redis.set(accessToken, JSON.stringify(user._id!), "EX", 3600);
 
       res.status(200).json({
         message: "User logged in successfully",

@@ -5,6 +5,7 @@ import urlRoutes from "./routes/url.routes";
 import AppDataSource from "./config/database";
 import { setupUrlSwagger } from "./swagger/swagger-docs/short-swagger";
 import connectDatabase from "./config/mongo";
+import cors from "cors";
 
 const app = express();
 
@@ -21,13 +22,13 @@ app.use(
   })
 );
 
-// const client = new Client({
-//   connectionString:
-//     "postgresql://shortner_9cxs_user:CMErRtPlXHYbgbnk8hjkEWd2qidSqDtU@dpg-ctjeu80gph6c738gko60-a.oregon-postgres.render.com/shortner_9cxs",
-//   ssl: {
-//     rejectUnauthorized: false,
-//   },
-// });
+app.use(
+  cors({
+    origin: "*", 
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE", 
+    credentials: true,
+  })
+);
 
 setupUrlSwagger(app);
 app.use("/auth", authRoutes);

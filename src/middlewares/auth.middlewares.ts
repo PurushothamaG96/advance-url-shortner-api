@@ -1,6 +1,6 @@
 import e, { Request, Response, NextFunction } from "express";
 import admin from "firebase-admin";
-import redis from "../config/redis";
+// import redis from "../config/redis";
 import { firebaseServiceConfigure } from "../config/firebase-service";
 import User from "../schema/user";
 
@@ -38,7 +38,9 @@ export const authenticate = async (
       const decodedToken = await admin.auth().verifyIdToken(token);
 
       // Check Redis for cached user ID
-      let userId: any = await redis.get(token);
+      // let userId: any = await redis.get(token);
+      const userId = "";
+
       req.user = JSON.parse(userId);
 
       if (!userId) {
@@ -49,8 +51,8 @@ export const authenticate = async (
           res.status(404).json({ message: "User not found" });
         } else {
           // Cache user ID in Redis for subsequent requests
-          userId = user._id!;
-          await redis.set(token, JSON.stringify(userId), "EX", 3600);
+          // userId = user._id!;
+          // await redis.set(token, JSON.stringify(userId), "EX", 3600);
         }
 
         // Attach user data to the request object

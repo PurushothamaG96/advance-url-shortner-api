@@ -6,7 +6,7 @@ import Analytics from "../schema/analytics";
 import UniqueDevices from "../schema/device";
 import UniqueOS from "../schema/os";
 import { generateShortId } from "../utils/shortener";
-import redis from "../config/redis";
+// import redis from "../config/redis";
 import { Types } from "mongoose";
 import { format } from "date-fns";
 import { processDeviceType, processOs } from "../utils/response";
@@ -130,7 +130,8 @@ export const getUrlAnalytics = async (req: Request, res: Response) => {
 
   try {
     // Check Redis cache
-    const analyticsBuffer = await redis.get(alias);
+    // const analyticsBuffer = await redis.get(alias);
+    const analyticsBuffer = false;
     if (analyticsBuffer) {
       res.status(200).json(JSON.parse(analyticsBuffer));
     } else {
@@ -191,7 +192,7 @@ export const getUrlAnalytics = async (req: Request, res: Response) => {
         };
 
         // Cache analytics data in Redis with a 10-second expiration
-        await redis.set(alias, JSON.stringify(response), "EX", 10);
+        // await redis.set(alias, JSON.stringify(response), "EX", 10);
 
         // Send response
         res.status(200).json(response);
@@ -208,7 +209,8 @@ export const getTopicAnalytics = async (req: Request, res: Response) => {
     const { topic } = req.params;
 
     // Check Redis cache
-    const topicBuffer = await redis.get(topic);
+    // const topicBuffer = await redis.get(topic);
+    const topicBuffer = false;
 
     if (topicBuffer) {
       res.status(200).json(JSON.parse(topicBuffer));
@@ -290,7 +292,7 @@ export const getTopicAnalytics = async (req: Request, res: Response) => {
         };
 
         // Cache the response in Redis
-        await redis.set(topic, JSON.stringify(response), "EX", 10);
+        // await redis.set(topic, JSON.stringify(response), "EX", 10);
 
         // Send the response
         res.status(200).json(response);
