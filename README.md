@@ -18,7 +18,7 @@ An advanced URL Shortener API built with Node.js, Express, and Mongoose using a 
     The doppler key is stored in the secrets.zip in main directory.
    Due to doppler secret expose in public, doppler revoked that doken.
    
-   #Zip file secrets.zip
+   # Zip file secrets.zip
    Password: #1234
 
 
