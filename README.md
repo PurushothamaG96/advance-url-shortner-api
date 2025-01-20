@@ -1,6 +1,9 @@
 # advance-url-shortner-api
 An advanced URL Shortener API built with Node.js, Express, and Mongoose using a MongoDB database. It supports user authentication via Google OAuth, URL shortening with customizable aliases, click tracking with detailed analytics (device, IP, OS), and Redis caching for optimal performance.
 
+# Deployed site
+    https://advance-url-shortner-api.onrender.com/url/docs/#/
+
 # Steps to Set Up
 1. # Clone the repository:
     cd advance-url-shortner-api
@@ -12,8 +15,12 @@ An advanced URL Shortener API built with Node.js, Express, and Mongoose using a 
     curl -Ls https://cli.doppler.com/install.sh | sh
 
 4. # Set up the environment using Doppler:
-# Deployed site
-    https://advance-url-shortner-api.onrender.com/url/docs/#/Analytics/get_api_analytics_analytic_overall
+    The doppler key is stored in the secrets.zip in main directory.
+   Due to doppler secret expose in public, doppler revoked that doken.
+   
+   #Zip file secrets.zip
+   Password: #1234
+
 
 # Steps to Set Up
 # 1. Clone the repository:
