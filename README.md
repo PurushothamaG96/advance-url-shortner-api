@@ -19,7 +19,7 @@ An advanced URL Shortener API built with Node.js, Express, and Mongoose using a 
    Due to doppler secret expose in public, doppler revoked that doken.
    
    # Zip file secrets.zip
-   Password: #1234
+   Password: 1234
 
 
 # Steps to Set Up
